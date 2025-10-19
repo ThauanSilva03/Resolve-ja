@@ -33,7 +33,6 @@ function resetUserTimer(msgFrom) {
     clearTimeout(userState.timeout);
   }
 
-  // Cria novo timer de 30 minutos
   userState.timeout = setTimeout(async () => {
     await client.sendMessage(
       msgFrom,
@@ -49,7 +48,6 @@ async function handleQuestionnaire(msg, userState, client) {
   switch (userState.step) {
     case 0:
       userState.step++;
-      console.log(userState.step);
       return "Antes de começar, deseja se identificar? (sim/não)";
     case 1:
       if (text === "sim") {
@@ -57,23 +55,21 @@ async function handleQuestionnaire(msg, userState, client) {
         userState.identified = true;
         return "Certo! Escreva seu nome:";
       } else if (text === "não" || text === "nao") {
-        console.log("Entrou no modo anonimo");
         userState.step = 5;
         userState.identified = false;
         userState.name = "Anônimo";
-        return "Tudo bem. Vamos continuar.\nPrimeiro, defina em poucas palavras o tipo do problema (ex: buraco, iluminação, lixo, árvore, saúde)";
+        //return "Tudo bem. Vamos continuar.\nPrimeiro, defina em poucas palavras o tipo do problema (ex: buraco, iluminação, lixo, árvore, saúde)";
+        return "Tudo bem. Vamos continuar.\nPrimeiro, defina em poucas palavras o tipo do problema (ex: buraco, iluminação, lixo, saúde)";
       } else {
         return "Por favor, responda apenas com 'sim' ou 'não'.";
       }
 
     case 2:
-      console.log("Entrou no case 2");
       userState.name = msg.body.trim();
       userState.step++;
       return "Digite o seu CPF:";
 
     case 3:
-      console.log("Entrou no case 3");
       if (!isValidCPF(msg.body.trim())) {
         return "Escreva o CPF apenas em números ou no formato 000.000.000-00 e tente novamente:";
       }
@@ -82,7 +78,6 @@ async function handleQuestionnaire(msg, userState, client) {
       return "Perfeito! Agora, defina em poucas palavras o tipo do problema (ex: buraco, iluminação, lixo, árvore, saúde)";
 
     case 5:
-      console.log("Entrou no case 5");
       userState.problemType = msg.body.trim();
       userState.step++;
       return "Deseja informar o endereço do problema? (sim/não)";
@@ -105,7 +100,6 @@ async function handleQuestionnaire(msg, userState, client) {
 
     case 8:
       if (!isValidDate(msg.body.trim())) {
-        console.log(msg.body.trim());
         return "Escreva a data no formato dia/mês/ano (ex: 18/10/2025).";
       }
       userState.date = msg.body.trim();
@@ -250,6 +244,8 @@ client.on("ready", () => {
 });
 
 client.on("message", async (msg) => {
+  if (msg.from.includes("@g.us")) return;
+
   const text = msg.body.trim().toLowerCase();
 
   if (text === "cancelar") {
@@ -274,7 +270,7 @@ client.on("message", async (msg) => {
     return;
   }
 
-  if (text === "começar") {
+  if (text === "começar" || text == "comecar") {
     const existingState = userStates.get(msg.from);
 
     if (existingState && existingState.step < 14) {
@@ -302,7 +298,7 @@ client.on("message", async (msg) => {
   } else {
     await client.sendMessage(
       msg.from,
-      "Digite *oi* para iniciar o atendimento do Resolve Já."
+      "Digite *começar* para iniciar o atendimento do Resolve Já."
     );
   }
 });
