@@ -1,0 +1,28 @@
+# Dependências
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Ambiente
+.env
+.env.local
+.env.*.local
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Compilados / build
+dist/
+build/
+
+# Cache
+.cache/
+
+# WhatsApp Web JS
+.wwebjs_auth/
+.wwebjs_cache/
