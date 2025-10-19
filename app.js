@@ -3,10 +3,8 @@ import qrcode from "qrcode-terminal";
 import { classifySecretaria } from "./classifier.js";
 
 const { Client, LocalAuth } = pkg;
-// 🧠 Estados das conversas por usuário
 const userStates = new Map();
 
-// 📋 Mensagens de boas-vindas aceitas
 const initMsgPossibilites = [
   "oi",
   "ola",
@@ -16,7 +14,6 @@ const initMsgPossibilites = [
   "boa noite",
 ];
 
-// 🔍 Validações auxiliares
 const isValidCPF = (cpf) => {
   const regex = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/;
   return regex.test(cpf);
@@ -27,7 +24,25 @@ const isValidDate = (date) => {
   return regex.test(date);
 };
 
-// 💬 Fluxo principal do questionário
+function resetUserTimer(msgFrom) {
+  const userState = userStates.get(msgFrom);
+  if (!userState) return;
+
+  // Se já tiver timer ativo, limpa
+  if (userState.timeout) {
+    clearTimeout(userState.timeout);
+  }
+
+  // Cria novo timer de 30 minutos
+  userState.timeout = setTimeout(async () => {
+    await client.sendMessage(
+      msgFrom,
+      "⏰ Sua demanda foi cancelada por inatividade (1 minutos sem resposta)."
+    );
+    userStates.delete(msgFrom);
+  }, 30 * 60 * 1000);
+}
+
 async function handleQuestionnaire(msg, userState, client) {
   const text = msg.body.trim().toLowerCase();
 
@@ -117,6 +132,7 @@ async function handleQuestionnaire(msg, userState, client) {
       if (msg.hasMedia) {
         const media = await msg.downloadMedia();
         userState.media = media;
+        console.log(media);
         userState.step = 12;
         return "Recebi sua mídia. Deseja mudar algo antes de enviar? (sim/não)";
       }
@@ -125,7 +141,7 @@ async function handleQuestionnaire(msg, userState, client) {
     case 12:
       if (text === "sim") {
         userState.step = 13;
-        userState.editingField = null; // novo controle
+        userState.editingField = null;
         return `O que deseja alterar?
       - Tipo do problema
       - Endereço
@@ -153,7 +169,7 @@ async function handleQuestionnaire(msg, userState, client) {
       }
 
     case 13:
-      // 1️⃣ Se ainda não escolheu o campo para alterar
+      // Se ainda não escolheu o campo para alterar
       if (!userState.editingField) {
         const option = text;
 
@@ -187,7 +203,7 @@ async function handleQuestionnaire(msg, userState, client) {
         }
       }
 
-      // 2️⃣ Se já escolheu o campo, atualiza de fato o valor
+      // Se já escolheu o campo, atualiza de fato o valor
       const newValue = msg.body.trim();
       switch (userState.editingField) {
         case "tipo do problema":
@@ -219,7 +235,6 @@ async function handleQuestionnaire(msg, userState, client) {
   }
 }
 
-// 🚀 Inicializa o cliente do WhatsApp
 const client = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: { headless: true },
@@ -237,9 +252,11 @@ client.on("ready", () => {
 client.on("message", async (msg) => {
   const text = msg.body.trim().toLowerCase();
 
-  // 🔴 Cancelar demanda a qualquer momento
   if (text === "cancelar") {
-    userStates.delete(msg.from);
+    const userState = userStates.get(msg.from);
+    if (userState && userState.timeout) {
+      clearTimeout(userState.timeout);
+    }
     await client.sendMessage(
       msg.from,
       "✅ Sua demanda foi cancelada. Se quiser, pode digitar *começar* para iniciar uma nova demanda."
@@ -247,8 +264,9 @@ client.on("message", async (msg) => {
     return;
   }
 
-  // Verifica se é uma saudação
   if (initMsgPossibilites.includes(text)) {
+    const existingState = userStates.get(msg.from);
+    if (existingState) return;
     client.sendMessage(
       msg.from,
       "Olá, bem vindo ao Resolve Já. Para começar uma nova demanda escreva *começar*."
@@ -256,19 +274,29 @@ client.on("message", async (msg) => {
     return;
   }
 
-  // Inicia o questionário
   if (text === "começar") {
-    userStates.set(msg.from, { step: 1 });
-    client.sendMessage(
+    const existingState = userStates.get(msg.from);
+
+    if (existingState && existingState.step < 14) {
+      await client.sendMessage(
+        msg.from,
+        "❌ Você já iniciou uma demanda. Por favor, conclua antes de iniciar outro. Ou escreva *cancelar* para cancelar a demanda atual"
+      );
+      return;
+    }
+
+    userStates.set(msg.from, { step: 1, timeout: null });
+    await client.sendMessage(
       msg.from,
       "Antes de começar, deseja se identificar? (sim/não)"
     );
     return;
   }
 
-  // Continua o fluxo
   const userState = userStates.get(msg.from);
   if (userState) {
+    resetUserTimer(msg.from);
+
     const reply = await handleQuestionnaire(msg, userState, client);
     if (reply) await client.sendMessage(msg.from, reply);
   } else {
