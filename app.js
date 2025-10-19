@@ -36,7 +36,7 @@ function resetUserTimer(msgFrom) {
   userState.timeout = setTimeout(async () => {
     await client.sendMessage(
       msgFrom,
-      "⏰ Sua demanda foi cancelada por inatividade (1 minutos sem resposta)."
+      "⏰ Sua demanda foi cancelada por inatividade (30 minutos sem resposta)."
     );
     userStates.delete(msgFrom);
   }, 30 * 60 * 1000);
@@ -75,7 +75,7 @@ async function handleQuestionnaire(msg, userState, client) {
       }
       userState.cpf = msg.body.trim();
       userState.step = 5;
-      return "Perfeito! Agora, defina em poucas palavras o tipo do problema (ex: buraco, iluminação, lixo, árvore, saúde)";
+      return "Perfeito! Agora, defina em poucas palavras o tipo do problema (ex: buraco, iluminação, lixo, saúde)";
 
     case 5:
       userState.problemType = msg.body.trim();
