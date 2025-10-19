@@ -253,6 +253,7 @@ client.on("message", async (msg) => {
     if (userState && userState.timeout) {
       clearTimeout(userState.timeout);
     }
+    userStates.delete(msg.from);
     await client.sendMessage(
       msg.from,
       "✅ Sua demanda foi cancelada. Se quiser, pode digitar *começar* para iniciar uma nova demanda."
